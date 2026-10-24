@@ -1,0 +1,26 @@
+[
+    {
+        "roll": "24mss035",
+        "name": "Nitharshan",
+        "marks": [
+            100.0,
+            99.0,
+            99.0
+        ],
+        "total": 298.0,
+        "average": 99.33,
+        "grade": "A"
+    },
+    {
+        "roll": "24mm036",
+        "name": "Sanjana",
+        "marks": [
+            100.0,
+            99.0,
+            98.0
+        ],
+        "total": 297.0,
+        "average": 99.0,
+        "grade": "A"
+    }
+]
