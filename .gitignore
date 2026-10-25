@@ -178,4 +178,13 @@ cython_debug/
 #  exclude from AI features like autocomplete and code analysis. Recommended for sensitive data
 #  refer to https://docs.cursor.com/context/ignore-files
 .cursorignore
-.cursorindexingignore
+.cursorindexingignore 
+# Python generated files
+__pycache__/
+*.py[cod]
+
+# Phase 3 local database
+Phase3/students.db
+Phase3/students.db-journal
+Phase3/students.db-wal
+Phase3/students.db-shm
