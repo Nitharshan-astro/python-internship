@@ -1,16 +1,22 @@
 
 # PHASE 3 - STUDENT ACADEMIC MANAGEMENT SYSTEM
-# Student Management Operations
+# Student Operations
+
+"""Student operations: add, view, search, update and delete records."""
 
 import sqlite3
-from database import DB_PATH, create_database
+import database
+from app_logging import logger
 
 
-# Calculate student result
 def calculate_result(marks):
+    """Calculate total, average and grade."""
+
+    if not marks:
+        raise ValueError("At least one mark is required.")
 
     total = sum(marks)
-    average = total / len(marks)
+    average = round(total / len(marks), 2)
 
     if any(mark < 50 for mark in marks):
         grade = "Fail"
@@ -21,70 +27,101 @@ def calculate_result(marks):
     else:
         grade = "C"
 
-    return total, round(average, 2), grade
+    return total, average, grade
 
 
-# Add student
-def add_student(roll, name, department, m1, m2, m3):
+def add_student(roll_no, name, department,
+                python_mark, database_mark, web_mark):
+    """Add a new student to the database."""
 
-    roll = roll.strip()
-    name = name.strip()
-    department = department.strip()
+    roll_no = str(roll_no).strip()
+    name = str(name).strip()
+    department = str(department).strip()
 
-    if not roll or not name or not department:
+    if not roll_no or not name or not department:
         return "All student details are required!"
 
     try:
-        marks = [float(m1), float(m2), float(m3)]
+        marks = [
+            float(python_mark),
+            float(database_mark),
+            float(web_mark)
+        ]
     except (ValueError, TypeError):
         return "Please enter valid marks!"
 
-    if any(not 0 <= mark <= 100 for mark in marks):
+    if any(mark < 0 or mark > 100 for mark in marks):
         return "Marks must be between 0 and 100!"
 
-    connection = sqlite3.connect(DB_PATH)
+    connection = sqlite3.connect(database.DB_PATH)
 
     try:
-        connection.execute("""
+        cursor = connection.cursor()
+
+        cursor.execute("""
             INSERT INTO students
+            (roll_no, name, department,
+             python_mark, database_mark, web_mark)
             VALUES (?, ?, ?, ?, ?, ?)
-        """, (roll, name, department, *marks))
+        """, (roll_no, name, department, *marks))
 
         connection.commit()
+
+        logger.info(
+            "Student added successfully: Roll No %s",
+            roll_no
+        )
+
         return "Student added successfully!"
 
     except sqlite3.IntegrityError:
+        logger.warning(
+            "Student addition failed: Duplicate Roll No %s",
+            roll_no
+        )
         return "Roll number already exists!"
 
     finally:
         connection.close()
 
 
-# View all students
 def view_students():
+    """Display all students in roll number order."""
 
-    connection = sqlite3.connect(DB_PATH)
+    connection = sqlite3.connect(database.DB_PATH)
 
     try:
-        cursor = connection.execute(
-            "SELECT * FROM students ORDER BY roll_no"
-        )
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT roll_no, name, department,
+                   python_mark, database_mark, web_mark
+            FROM students
+            ORDER BY roll_no
+        """)
+
         return cursor.fetchall()
 
     finally:
         connection.close()
 
 
-# Search student
-def search_student(roll):
+def search_student(roll_no):
+    """Search for a student using roll number."""
 
-    connection = sqlite3.connect(DB_PATH)
+    roll_no = str(roll_no).strip()
+
+    connection = sqlite3.connect(database.DB_PATH)
 
     try:
-        cursor = connection.execute(
-            "SELECT * FROM students WHERE roll_no = ?",
-            (roll,)
-        )
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT roll_no, name, department,
+                   python_mark, database_mark, web_mark
+            FROM students
+            WHERE roll_no = ?
+        """, (roll_no,))
 
         return cursor.fetchone()
 
@@ -92,29 +129,35 @@ def search_student(roll):
         connection.close()
 
 
-# Update student
+def update_student(roll_no, name, department,
+                   python_mark, database_mark, web_mark):
+    """Update an existing student's details."""
 
-def update_student(roll, name, department, m1, m2, m3):
+    roll_no = str(roll_no).strip()
+    name = str(name).strip()
+    department = str(department).strip()
 
-    roll = roll.strip()
-    name = name.strip()
-    department = department.strip()
-
-    if not roll or not name or not department:
+    if not roll_no or not name or not department:
         return "All student details are required!"
 
     try:
-        marks = [float(m1), float(m2), float(m3)]
+        marks = [
+            float(python_mark),
+            float(database_mark),
+            float(web_mark)
+        ]
     except (ValueError, TypeError):
         return "Please enter valid marks!"
 
-    if any(not 0 <= mark <= 100 for mark in marks):
+    if any(mark < 0 or mark > 100 for mark in marks):
         return "Marks must be between 0 and 100!"
 
-    connection = sqlite3.connect(DB_PATH)
+    connection = sqlite3.connect(database.DB_PATH)
 
     try:
-        cursor = connection.execute("""
+        cursor = connection.cursor()
+
+        cursor.execute("""
             UPDATE students
             SET name = ?,
                 department = ?,
@@ -122,38 +165,56 @@ def update_student(roll, name, department, m1, m2, m3):
                 database_mark = ?,
                 web_mark = ?
             WHERE roll_no = ?
-        """, (
-            name,
-            department,
-            *marks,
-            roll
-        ))
+        """, (name, department, *marks, roll_no))
 
         connection.commit()
 
         if cursor.rowcount == 0:
+            logger.warning(
+                "Update failed: Student not found: Roll No %s",
+                roll_no
+            )
             return "Student not found!"
+
+        logger.info(
+            "Student updated successfully: Roll No %s",
+            roll_no
+        )
 
         return "Student updated successfully!"
 
     finally:
         connection.close()
 
-# Delete student
-def delete_student(roll):
 
-    connection = sqlite3.connect(DB_PATH)
+def delete_student(roll_no):
+    """Delete a student using roll number."""
+
+    roll_no = str(roll_no).strip()
+
+    connection = sqlite3.connect(database.DB_PATH)
 
     try:
-        cursor = connection.execute(
-            "DELETE FROM students WHERE roll_no = ?",
-            (roll.strip(),)
-        )
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            DELETE FROM students
+            WHERE roll_no = ?
+        """, (roll_no,))
 
         connection.commit()
 
         if cursor.rowcount == 0:
+            logger.warning(
+                "Delete failed: Student not found: Roll No %s",
+                roll_no
+            )
             return "Student not found!"
+
+        logger.info(
+            "Student deleted successfully: Roll No %s",
+            roll_no
+        )
 
         return "Student deleted successfully!"
 
@@ -161,27 +222,6 @@ def delete_student(roll):
         connection.close()
 
 
-# Test operations
 if __name__ == "__main__":
-
-    create_database()
-
-    print("\nSTUDENT MANAGEMENT TEST")
-
-    print(add_student(
-        "101", "Arun", "Computer Science",
-        90, 85, 95
-    ))
-
-    print("\nStudent Records:")
-
-    for student in view_students():
-        print(student)
-
-    print("\nSearch Result:")
-    print(search_student("101"))
-
-    print("\nCalculated Result:")
-    print(calculate_result([90, 85, 95]))
-
-    print("\nProgram executed successfully!")
+    database.create_database()
+    print("Student Operations module is ready.")

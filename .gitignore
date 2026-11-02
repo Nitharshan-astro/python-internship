@@ -163,3 +163,20 @@ phase3/students.db
 phase3/students.db-journal
 phase3/students.db-wal
 phase3/students.db-shm
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Python temporary files
+__pycache__/
+*.py[cod]
+
+# PyInstaller build files
+build/
+dist/
+*.spec
+# Database files
+*.db
+*.sqlite
+*.sqlite3
